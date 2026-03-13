@@ -5,15 +5,80 @@ services:
     container_name: gitlab
     # hostname: foxinstudio.fr
     shm_size: 256m
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://localhost'
+        gitlab_rails['gitlab_shell_ssh_port'] = 22
+
+        # Configuration de la base de données PostgreSQL
+        postgresql['enable'] = false
+        gitlab_rails['db_adapter'] = 'postgresql'
+        gitlab_rails['db_host'] = 'postgresql'
+        gitlab_rails['db_database'] = '${DB_NAME}'
+        gitlab_rails['db_username'] = '${DB_USER}'
+        gitlab_rails['db_password'] = '${DB_PASSWORD}'
+        gitlab_rails['db_port'] = '${DB_PORT}'
+
+        registry_external_url 'http://localhost:5050'
+        gitlab_rails['registry_enabled'] = true
+
+        gitlab_rails['time_zone'] = 'Europe/Paris'
+
+        gitlab_rails['initial_root_password'] = '${GITLAB_ROOT_PASSWORD}'
+
+        gitlab_rails['smtp_enable'] = true
+        gitlab_rails['smtp_address'] = 'smtp.example.com'
+        gitlab_rails['smtp_port'] = 587
+        gitlab_rails['smtp_user_name'] = 'smtp_user'
+        gitlab_rails['smtp_password'] = 'smtp_password'
+        gitlab_rails['smtp_domain'] = 'example.com'
+        gitlab_rails['smtp_authentication'] = 'login'
     ports:
       - 443:443
       - 80:80
       - 22:22
+      - 5050:5050
     volumes:
       - gitlab-config:/etc/gitlab
       - gitlab-logs:/var/log/gitlab
       - gitlab-data:/var/opt/gitlab
+  postgresql:
+    image: postgres:latest
+    restart: always
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    restart: always
+    env_file:
+      - .env
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+    ports:
+      - 8080:80
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
 volumes:
   gitlab-data:
+  postgres-data:
   gitlab-config:
   gitlab-logs:
+  pgadmin-data:
+networks:
+  default:
+    driver: bridge
