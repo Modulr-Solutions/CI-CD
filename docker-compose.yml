@@ -73,12 +73,34 @@ services:
       - 8080:80
     volumes:
       - pgadmin-data:/var/lib/pgadmin
+  gitlab-runner-docker:
+    image: gitlab/gitlab-runner:latest
+    container_name: gitlab-runner-docker
+    restart: always
+    volumes:
+      - runner-docker-config:/etc/gitlab-runner
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - gitlab
+      - postgresql
+  gitlab-runner-shell:
+    image: gitlab/gitlab-runner:latest
+    container_name: gitlab-runner-shell
+    restart: always
+    volumes:
+      - runner-shell-config:/etc/gitlab-runner
+    depends_on:
+      - gitlab
+      - postgresql
+
 volumes:
   gitlab-data:
   postgres-data:
   gitlab-config:
   gitlab-logs:
   pgadmin-data:
+  runner-docker-config:
+  runner-shell-config:
 networks:
   default:
     driver: bridge
