@@ -1,0 +1,47 @@
+stages:
+  - test
+  - build
+  - push
+  - deploy
+
+test:
+  stage: test
+  tags:
+    - docker
+  image: python:3.12-slim
+  before_script:
+    - pip install -r requirements.txt --quiet
+  script: 
+    - echo "Lancement des tests"
+    - pytest tests/ -v --tb=short
+
+build:
+  stage: build
+  tags:
+    - docker
+  image: docker:latest
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE:latest .
+
+push:
+  stage: push
+  tags:
+    - docker
+  image: docker:latest
+  script:
+    - echo "Connexion au registry"
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - echo "Push de l'image"
+    - docker push $CI_REGISTRY_IMAGE:latest
+
+deploy:
+  stage: deploy
+  tags:
+    - docker
+  image: docker:latest
+  script:
+    - echo "Déploiement de l'application"
+    - echo "$CI_JOB_TOKEN" | docker login -u gitlab-ci-token --password-stdin "$CI_REGISTRY"
+    - docker pull $CI_REGISTRY_IMAGE:latest
+    - docker rm -f demo-app || true
+    - docker run -d --name demo-app -p 5000:5000 $CI_REGISTRY_IMAGE:latest
