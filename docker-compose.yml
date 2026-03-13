@@ -1,0 +1,26 @@
+services:
+  gitlab:
+    image: 'gitlab/gitlab-ce:latest'
+    restart: always
+    container_name: gitlab
+    # hostname: foxinstudio.fr
+    shm_size: 256m
+    ports:
+      - 443:443
+      - 80:80
+      - 22:22
+
+  postgresql:
+    image: postgres:15
+    restart: always
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - gitlab-data:/var/lib/postgresql/data
+    
+volumes:
+  gitlab-data:
